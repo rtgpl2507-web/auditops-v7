@@ -310,9 +310,14 @@ const DOCUMENTS: Record<string, string> = {
 };
 
 export function generateFrameworkData(framework: FrameworkType): FrameworkData {
-  const domains = FRAMEWORK_DOMAINS[framework] ?? [];
+  const frameworkKey =
+    Object.keys(FRAMEWORK_DOMAINS).find(
+      k => k.toLowerCase() === String(framework).toLowerCase()
+    ) as FrameworkType;
 
-  if (domains.length === 0) {
+  const domains = FRAMEWORK_DOMAINS[frameworkKey] ?? [];
+
+  if (!frameworkKey || domains.length === 0) {
     throw new Error(`Framework not found: ${framework}`);
   }
   const controls: AuditControl[] = [];
