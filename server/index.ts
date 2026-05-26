@@ -12,7 +12,15 @@ import { taskRouter } from './routes/tasks';
 const app = express();
 const PORT = Number(process.env.SERVER_PORT ?? 3001);
 
-app.use(cors({ origin: [`http://localhost:3000`, `http://localhost:${PORT}`] }));
+app.use(
+  cors({
+    origin: [
+      'https://auditopss.netlify.app',
+      'http://localhost:3000'
+    ],
+    credentials: true
+  })
+);
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true }));
 
