@@ -310,7 +310,11 @@ const DOCUMENTS: Record<string, string> = {
 };
 
 export function generateFrameworkData(framework: FrameworkType): FrameworkData {
-  const domains = FRAMEWORK_DOMAINS[framework];
+  const domains = FRAMEWORK_DOMAINS[framework] ?? [];
+
+  if (domains.length === 0) {
+    throw new Error(`Framework not found: ${framework}`);
+  }
   const controls: AuditControl[] = [];
   let srCounter = 1;
 
