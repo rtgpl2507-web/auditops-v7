@@ -1,0 +1,12 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "target": "ES2022",
+    "outDir": "../dist/server",
+    "noEmit": false,
+    "allowImportingTsExtensions": false
+  },
+  "include": ["./**/*.ts", "../src/types.ts"]
+}

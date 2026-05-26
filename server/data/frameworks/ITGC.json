@@ -1,0 +1,215 @@
+{
+  "framework": "ITGC",
+  "controls": [],
+  "tasks": [],
+  "activity": [
+    {
+      "id": "3s8z5vi",
+      "controlId": "",
+      "controlPoint": "",
+      "action": "Imported 0 controls from CSV (93 rows skipped — missing required fields)",
+      "timestamp": "2026-05-20T07:10:34.535Z",
+      "user": "Current User"
+    },
+    {
+      "id": "6kzgcta",
+      "controlId": "ITGC-ctrl-r8yiwpa",
+      "controlPoint": "Communication procedures for incident notification (internal and external) are established.",
+      "action": "Deleted checklist task",
+      "timestamp": "2026-05-20T06:47:57.315Z",
+      "user": "Current User"
+    },
+    {
+      "id": "jqqhrwt",
+      "controlId": "ITGC-ctrl-4cw81t7",
+      "controlPoint": "Incident response team roles and responsibilities are clearly defined.",
+      "action": "Deleted checklist task",
+      "timestamp": "2026-05-20T06:47:56.935Z",
+      "user": "Current User"
+    },
+    {
+      "id": "4170134",
+      "controlId": "ITGC-ctrl-t69anmz",
+      "controlPoint": "Post-incident reviews are conducted for significant events to prevent recurrence.",
+      "action": "Deleted checklist task",
+      "timestamp": "2026-05-20T06:47:56.520Z",
+      "user": "Current User"
+    },
+    {
+      "id": "sra3rz7",
+      "controlId": "ITGC-ctrl-d8v0cww",
+      "controlPoint": "Security incidents are logged, classified by severity, and tracked to resolution.",
+      "action": "Deleted checklist task",
+      "timestamp": "2026-05-20T06:47:55.980Z",
+      "user": "Current User"
+    },
+    {
+      "id": "60r134j",
+      "controlId": "ITGC-ctrl-rfpihec",
+      "controlPoint": "Incident response plan is documented, approved, and communicated to staff.",
+      "action": "Deleted checklist task",
+      "timestamp": "2026-05-20T06:47:55.478Z",
+      "user": "Current User"
+    },
+    {
+      "id": "ir8c08b",
+      "controlId": "ITGC-ctrl-1849003",
+      "controlPoint": "Wireless network access is secured using enterprise-grade authentication.",
+      "action": "Deleted checklist task",
+      "timestamp": "2026-05-20T06:47:54.745Z",
+      "user": "Current User"
+    },
+    {
+      "id": "wmwpj5t",
+      "controlId": "ITGC-ctrl-bdd2300",
+      "controlPoint": "Penetration testing is conducted annually by qualified third parties.",
+      "action": "Deleted checklist task",
+      "timestamp": "2026-05-20T06:47:50.247Z",
+      "user": "Current User"
+    },
+    {
+      "id": "fa8pb9j",
+      "controlId": "ITGC-ctrl-u7ba1kl",
+      "controlPoint": "Network segmentation is in place to isolate sensitive systems and data.",
+      "action": "Deleted checklist task",
+      "timestamp": "2026-05-20T06:47:49.874Z",
+      "user": "Current User"
+    },
+    {
+      "id": "5or0j89",
+      "controlId": "ITGC-ctrl-09hs0wy",
+      "controlPoint": "Network traffic is monitored for anomalies via IDS/IPS solutions.",
+      "action": "Deleted checklist task",
+      "timestamp": "2026-05-20T06:47:49.556Z",
+      "user": "Current User"
+    },
+    {
+      "id": "b7eeddu",
+      "controlId": "ITGC-ctrl-pxecztd",
+      "controlPoint": "Firewall rules are documented, reviewed, and approved by network security team.",
+      "action": "Deleted checklist task",
+      "timestamp": "2026-05-20T06:47:49.210Z",
+      "user": "Current User"
+    },
+    {
+      "id": "dcrzq00",
+      "controlId": "ITGC-ctrl-0p3m0cb",
+      "controlPoint": "Recovery Time Objective (RTO) and Recovery Point Objective (RPO) are defined and tested.",
+      "action": "Deleted checklist task",
+      "timestamp": "2026-05-20T06:47:48.918Z",
+      "user": "Current User"
+    },
+    {
+      "id": "m1xxwvd",
+      "controlId": "ITGC-ctrl-n2ekh17",
+      "controlPoint": "Backup media is stored offsite or in a geographically separated data center.",
+      "action": "Deleted checklist task",
+      "timestamp": "2026-05-20T06:47:48.656Z",
+      "user": "Current User"
+    },
+    {
+      "id": "0s7nq2h",
+      "controlId": "ITGC-ctrl-84zkfpq",
+      "controlPoint": "Restore tests are performed periodically to confirm backup integrity.",
+      "action": "Deleted checklist task",
+      "timestamp": "2026-05-20T06:47:48.353Z",
+      "user": "Current User"
+    },
+    {
+      "id": "g4ki2eu",
+      "controlId": "ITGC-ctrl-mrjrufp",
+      "controlPoint": "Backup completion is monitored and failures are investigated and resolved.",
+      "action": "Deleted checklist task",
+      "timestamp": "2026-05-20T06:47:47.959Z",
+      "user": "Current User"
+    },
+    {
+      "id": "3wf1bw4",
+      "controlId": "ITGC-ctrl-b24mppt",
+      "controlPoint": "Backup procedures are documented and backups are scheduled per policy.",
+      "action": "Deleted checklist task",
+      "timestamp": "2026-05-20T06:47:47.468Z",
+      "user": "Current User"
+    },
+    {
+      "id": "9033gdw",
+      "controlId": "ITGC-ctrl-i0p4s2g",
+      "controlPoint": "Segregation of duties is maintained between developers and production access.",
+      "action": "Deleted checklist task",
+      "timestamp": "2026-05-20T06:47:46.768Z",
+      "user": "Current User"
+    },
+    {
+      "id": "7w6huwm",
+      "controlId": "ITGC-ctrl-0ltjyl4",
+      "controlPoint": "Emergency change procedures are defined and usage is reviewed post-implementation.",
+      "action": "Deleted checklist task",
+      "timestamp": "2026-05-20T06:47:46.217Z",
+      "user": "Current User"
+    },
+    {
+      "id": "v5ps7sd",
+      "controlId": "ITGC-ctrl-b79tu1f",
+      "controlPoint": "Change approval is documented with sign-off from authorized change managers.",
+      "action": "Deleted checklist task",
+      "timestamp": "2026-05-20T06:47:45.723Z",
+      "user": "Current User"
+    },
+    {
+      "id": "cfnzp27",
+      "controlId": "ITGC-ctrl-3leuaeu",
+      "controlPoint": "Changes are tested in a non-production environment before deployment.",
+      "action": "Deleted checklist task",
+      "timestamp": "2026-05-20T06:47:45.278Z",
+      "user": "Current User"
+    },
+    {
+      "id": "17lwuuk",
+      "controlId": "ITGC-ctrl-m52dkei",
+      "controlPoint": "All changes to production systems go through a formal change request process.",
+      "action": "Deleted checklist task",
+      "timestamp": "2026-05-20T06:47:44.796Z",
+      "user": "Current User"
+    },
+    {
+      "id": "yhysilf",
+      "controlId": "ITGC-ctrl-3qwuiw0",
+      "controlPoint": "Generic/shared accounts are prohibited or controlled with compensating controls.",
+      "action": "Deleted checklist task",
+      "timestamp": "2026-05-20T06:47:44.397Z",
+      "user": "Current User"
+    },
+    {
+      "id": "ffgwimw",
+      "controlId": "ITGC-ctrl-uriknuo",
+      "controlPoint": "Multi-factor authentication is enforced for all privileged and remote access.",
+      "action": "Deleted checklist task",
+      "timestamp": "2026-05-20T06:47:43.969Z",
+      "user": "Current User"
+    },
+    {
+      "id": "wenolm4",
+      "controlId": "ITGC-ctrl-cgt0edf",
+      "controlPoint": "Periodic user access reviews are conducted and documented at least quarterly.",
+      "action": "Deleted checklist task",
+      "timestamp": "2026-05-20T06:47:43.758Z",
+      "user": "Current User"
+    },
+    {
+      "id": "cb77xj5",
+      "controlId": "ITGC-ctrl-duh7qol",
+      "controlPoint": "Privileged access is restricted to authorized personnel with documented approval.",
+      "action": "Deleted checklist task",
+      "timestamp": "2026-05-20T06:47:43.319Z",
+      "user": "Current User"
+    },
+    {
+      "id": "vlx3dn2",
+      "controlId": "ITGC-ctrl-xo06qyo",
+      "controlPoint": "Formal user access provisioning and de-provisioning process exists and is enforced.",
+      "action": "Deleted checklist task",
+      "timestamp": "2026-05-20T06:47:42.240Z",
+      "user": "Current User"
+    }
+  ]
+}
