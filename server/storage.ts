@@ -1,15 +1,71 @@
 import fs from 'fs';
 import path from 'path';
-import { FrameworkType, FrameworkData, Task } from '../src/types';
+import { FrameworkType, FrameworkData, Task, FrameworkEntry, BUILTIN_FRAMEWORKS } from '../src/types';
 import { generateFrameworkData } from './seedData';
 
-const DATA_DIR = path.join(process.cwd(), 'server', 'data', 'frameworks');
+const DATA_DIR    = path.join(process.cwd(), 'server', 'data', 'frameworks');
 const UPLOADS_DIR = path.join(process.cwd(), 'server', 'data', 'uploads');
-const TASKS_DIR = path.join(process.cwd(), 'server', 'data', 'tasks');
+const TASKS_DIR   = path.join(process.cwd(), 'server', 'data', 'tasks');
+const REGISTRY_PATH = path.join(process.cwd(), 'server', 'data', 'registry.json');
 
 [DATA_DIR, UPLOADS_DIR, TASKS_DIR].forEach(dir => {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 });
+
+// ── Framework Registry ────────────────────────────────────────────────────────
+
+interface Registry {
+  custom: FrameworkEntry[];
+}
+
+function readRegistry(): Registry {
+  if (fs.existsSync(REGISTRY_PATH)) {
+    try {
+      return JSON.parse(fs.readFileSync(REGISTRY_PATH, 'utf-8')) as Registry;
+    } catch { /* fall through */ }
+  }
+  return { custom: [] };
+}
+
+function writeRegistry(reg: Registry): void {
+  fs.writeFileSync(REGISTRY_PATH, JSON.stringify(reg, null, 2), 'utf-8');
+}
+
+/** Returns the full list of frameworks: built-in first, then custom. */
+export function listFrameworks(): FrameworkEntry[] {
+  const builtins: FrameworkEntry[] = [
+    { id: 'ITGC',    name: 'ITGC',    description: 'Information Technology General Controls',             isBuiltin: true },
+    { id: 'ITAC',    name: 'ITAC',    description: 'Information Technology Application Controls',          isBuiltin: true },
+    { id: 'SOC2',    name: 'SOC2',    description: 'Service Organization Control 2',                       isBuiltin: true },
+    { id: 'ISO27001',name: 'ISO27001',description: 'Information Security Management',                      isBuiltin: true },
+    { id: 'HIPAA',   name: 'HIPAA',   description: 'Health Insurance Portability and Accountability Act',  isBuiltin: true },
+  ];
+  const { custom } = readRegistry();
+  return [...builtins, ...custom];
+}
+
+/** Registers a brand-new custom framework. Returns null if name already taken. */
+export function registerFramework(name: string, description: string): FrameworkEntry | null {
+  const id = name.toUpperCase().replace(/[^A-Z0-9_]/g, '_');
+
+  // check against built-ins
+  if ((BUILTIN_FRAMEWORKS as readonly string[]).includes(id)) return null;
+
+  const reg = readRegistry();
+  if (reg.custom.some(c => c.id === id)) return null;
+
+  const entry: FrameworkEntry = { id, name: name.trim(), description: description.trim(), isBuiltin: false };
+  reg.custom.push(entry);
+  writeRegistry(reg);
+
+  // Initialise with empty framework data right away
+  const data: FrameworkData = { framework: id, controls: [], tasks: [], activity: [] };
+  saveFrameworkData(id, data);
+
+  return entry;
+}
+
+// ── Framework Data ────────────────────────────────────────────────────────────
 
 function getFrameworkPath(framework: FrameworkType): string {
   return path.join(DATA_DIR, `${framework}.json`);
@@ -26,9 +82,16 @@ export function getFrameworkData(framework: FrameworkType): FrameworkData {
     const raw = fs.readFileSync(filePath, 'utf-8');
     data = JSON.parse(raw) as FrameworkData;
   } else {
-    data = generateFrameworkData(framework);
+    // For built-in frameworks use seed data; for custom ones start empty
+    const isBuiltin = (BUILTIN_FRAMEWORKS as readonly string[]).includes(
+      String(framework).toUpperCase()
+    );
+    if (isBuiltin) {
+      data = generateFrameworkData(framework);
+    } else {
+      data = { framework, controls: [], tasks: [], activity: [] };
+    }
   }
-  // Ensure tasks array always present (backward compat)
   if (!data.tasks) data.tasks = loadTasks(framework);
   saveFrameworkData(framework, data);
   return data;
@@ -45,7 +108,6 @@ export function loadTasks(framework: FrameworkType): Task[] {
 export function saveFrameworkData(framework: FrameworkType, data: FrameworkData): void {
   const filePath = getFrameworkPath(framework);
   fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
-  // Also persist tasks separately for quick access
   fs.writeFileSync(getTasksPath(framework), JSON.stringify(data.tasks ?? [], null, 2), 'utf-8');
 }
 
@@ -74,7 +136,12 @@ export function deleteTaskFileFromDisk(framework: FrameworkType, taskId: string,
 }
 
 export function resetFrameworkData(framework: FrameworkType): FrameworkData {
-  const data = generateFrameworkData(framework);
+  const isBuiltin = (BUILTIN_FRAMEWORKS as readonly string[]).includes(
+    String(framework).toUpperCase()
+  );
+  const data = isBuiltin
+    ? generateFrameworkData(framework)
+    : { framework, controls: [], tasks: [], activity: [] };
   data.tasks = [];
   saveFrameworkData(framework, data);
   return data;

@@ -1,4 +1,4 @@
-import { FrameworkType, FrameworkData, AuditControl, EvidenceFile } from '../types';
+import { FrameworkType, FrameworkData, AuditControl, EvidenceFile, FrameworkEntry } from '../types';
 
 const BASE = '/api';
 
@@ -11,6 +11,22 @@ async function handleResponse<T>(res: globalThis.Response): Promise<T> {
 }
 
 // ── Frameworks ────────────────────────────────────────────────────────────────
+
+/** Returns all frameworks (built-in + custom). */
+export async function listFrameworks(): Promise<FrameworkEntry[]> {
+  const res = await fetch(`${BASE}/frameworks`);
+  return handleResponse<FrameworkEntry[]>(res);
+}
+
+/** Creates a new custom framework. */
+export async function createFramework(name: string, description: string): Promise<FrameworkEntry> {
+  const res = await fetch(`${BASE}/frameworks`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, description }),
+  });
+  return handleResponse<FrameworkEntry>(res);
+}
 
 export async function fetchFramework(framework: FrameworkType): Promise<FrameworkData> {
   const res = await fetch(`${BASE}/frameworks/${framework}`);

@@ -8,6 +8,8 @@ import {
   getControlUploadsDir,
   deleteFileFromDisk,
   resetFrameworkData,
+  listFrameworks,
+  registerFramework,
 } from '../storage';
 
 export const frameworkRouter = Router();
@@ -27,6 +29,29 @@ const upload = multer({ storage, limits: { fileSize: 25 * 1024 * 1024 } });
 
 // CSV import multer (memory storage)
 const csvUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
+
+// ── GET /api/frameworks  (list all frameworks) ────────────────────────────────
+frameworkRouter.get('/', (_req: Request, res: Response) => {
+  res.json(listFrameworks());
+});
+
+// ── POST /api/frameworks  (create a new custom framework) ─────────────────────
+frameworkRouter.post('/', (req: Request, res: Response) => {
+  const { name, description } = req.body as { name?: string; description?: string };
+
+  if (!name || !name.trim()) {
+    return res.status(400).json({ error: 'Framework name is required.' });
+  }
+  if (name.trim().length > 30) {
+    return res.status(400).json({ error: 'Framework name must be 30 characters or fewer.' });
+  }
+
+  const entry = registerFramework(name.trim(), (description ?? '').trim());
+  if (!entry) {
+    return res.status(409).json({ error: 'A framework with that name already exists.' });
+  }
+  res.status(201).json(entry);
+});
 
 // ── GET /api/frameworks/:framework ──────────────────────────────────────────
 frameworkRouter.get('/:framework', (req: Request, res: Response) => {

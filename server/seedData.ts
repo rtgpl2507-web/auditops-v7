@@ -4,7 +4,7 @@ function generateId() {
   return Math.random().toString(36).substring(2, 9);
 }
 
-const FRAMEWORK_DOMAINS: Record<FrameworkType, { domain: string; subDomains: string[]; controls: string[] }[]> = {
+const FRAMEWORK_DOMAINS: Record<string, { domain: string; subDomains: string[]; controls: string[] }[]> = {
   ITGC: [
     {
       domain: 'Access Management',
@@ -313,12 +313,13 @@ export function generateFrameworkData(framework: FrameworkType): FrameworkData {
   const frameworkKey =
     Object.keys(FRAMEWORK_DOMAINS).find(
       k => k.toLowerCase() === String(framework).toLowerCase()
-    ) as FrameworkType;
+    );
 
-  const domains = FRAMEWORK_DOMAINS[frameworkKey] ?? [];
+  const domains = frameworkKey ? FRAMEWORK_DOMAINS[frameworkKey] : [];
 
+  // For custom (unknown) frameworks, return empty data rather than throwing
   if (!frameworkKey || domains.length === 0) {
-    throw new Error(`Framework not found: ${framework}`);
+    return { framework, controls: [], tasks: [], activity: [] };
   }
   const controls: AuditControl[] = [];
   let srCounter = 1;

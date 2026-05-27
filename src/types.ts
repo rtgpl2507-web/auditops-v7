@@ -1,4 +1,17 @@
-export type FrameworkType = 'ITGC' | 'ITAC' | 'SOC2' | 'ISO27001' | 'HIPAA';
+/** Built-in framework identifiers. Custom frameworks added at runtime are also valid strings. */
+export type FrameworkType = string;
+
+/** The five built-in audit frameworks shipped with AuditOps. */
+export const BUILTIN_FRAMEWORKS = ['ITGC', 'ITAC', 'SOC2', 'ISO27001', 'HIPAA'] as const;
+export type BuiltinFrameworkId = (typeof BUILTIN_FRAMEWORKS)[number];
+
+/** Registry entry for a framework (built-in or custom). */
+export interface FrameworkEntry {
+  id: string;
+  name: string;
+  description: string;
+  isBuiltin: boolean;
+}
 
 export type ControlStatus = 'In Progress' | 'Pending From Client' | 'Completed' | 'Not Started';
 export type TaskStatus = 'Not Started' | 'In Progress' | 'Completed';
