@@ -1,6 +1,9 @@
 import { FrameworkType, FrameworkData, AuditControl, EvidenceFile, FrameworkEntry } from '../types';
 
-const BASE = '/api';
+const BASE =
+  import.meta.env.PROD
+    ? 'https://auditops-v7.onrender.com/api'
+    : '/api';
 
 async function handleResponse<T>(res: globalThis.Response): Promise<T> {
   if (!res.ok) {
