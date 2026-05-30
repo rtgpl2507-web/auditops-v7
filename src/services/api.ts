@@ -254,3 +254,16 @@ export async function importTasks(framework: FrameworkType, file: File): Promise
   const res = await fetch(`${BASE}/tasks/${framework}/import`, { method: 'POST', body: form });
   return handleResponse<{ imported: number; total: number }>(res);
 }
+
+export async function verifyMasterAccess(code: string): Promise<boolean> {
+  const res = await fetch(`${BASE}/access/verify`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code }),
+  });
+
+  if (!res.ok) return false;
+
+  const data = await res.json();
+  return data.success === true;
+}
