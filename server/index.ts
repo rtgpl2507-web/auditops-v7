@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import path from 'path';
 import dotenv from 'dotenv';
+import { accessRouter } from './routes/access';
 
 dotenv.config({ path: '.env.local' });
 
@@ -28,6 +29,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api/uploads', express.static(path.join(process.cwd(), 'server', 'data', 'uploads')));
 
 // API Routes
+app.use('/api/access', accessRouter);
 app.use('/api/frameworks', frameworkRouter);
 app.use('/api/ai', aiRouter);
 app.use('/api/tasks', taskRouter);
