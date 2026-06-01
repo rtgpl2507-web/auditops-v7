@@ -5,7 +5,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Award, Shield, FileCheck, Lock, Activity, Plus, X,
-  Loader2, AlertCircle, CheckCircle, LogOut, Boxes,
+  Loader2, AlertCircle, CheckCircle, LogOut, Boxes, Pencil, Trash2,
 } from 'lucide-react';
 import { FrameworkEntry } from '../types';
 import { useAuditContext } from '../data/AuditContext';
@@ -54,6 +54,17 @@ export function FrameworkSelector() {
   const [formError, setFormError]       = useState('');
   const [submitting, setSubmitting]     = useState(false);
   const [successMsg, setSuccessMsg]     = useState('');
+
+  // Rename-framework inline edit
+  const [editingId, setEditingId]       = useState<string | null>(null);
+  const [editName, setEditName]         = useState('');
+  const [editDesc, setEditDesc]         = useState('');
+  const [editError, setEditError]       = useState('');
+  const [editSubmitting, setEditSubmitting] = useState(false);
+
+  // Delete-framework confirmation
+  const [deletingId, setDeletingId]     = useState<string | null>(null);
+  const [deleteSubmitting, setDeleteSubmitting] = useState(false);
 
   // ── load frameworks ────────────────────────────────────────────────────────
   const loadFrameworks = useCallback(async () => {
@@ -111,6 +122,69 @@ export function FrameworkSelector() {
     setNewName('');
     setNewDesc('');
     setFormError('');
+  };
+
+  // ── rename handlers ────────────────────────────────────────────────────────
+  const startEdit = (fw: FrameworkEntry) => {
+    setEditingId(fw.id);
+    setEditName(fw.name);
+    setEditDesc(fw.description);
+    setEditError('');
+    setDeletingId(null);
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditName('');
+    setEditDesc('');
+    setEditError('');
+  };
+
+  const handleRename = async (fw: FrameworkEntry) => {
+    const trimmed = editName.trim();
+    if (!trimmed) { setEditError('Name is required.'); return; }
+    if (trimmed.length > 30) { setEditError('Name must be 30 characters or fewer.'); return; }
+    if (!/^[A-Za-z0-9 _\-]+$/.test(trimmed)) {
+      setEditError('Only letters, digits, spaces, hyphens, and underscores are allowed.');
+      return;
+    }
+    setEditSubmitting(true);
+    setEditError('');
+    try {
+      const updated = await api.renameFramework(fw.id, trimmed, editDesc.trim());
+      setFrameworks(prev => prev.map(f => f.id === fw.id ? updated : f));
+      setSuccessMsg(`Framework renamed to "${updated.name}" successfully!`);
+      setTimeout(() => setSuccessMsg(''), 4000);
+      cancelEdit();
+    } catch (err: any) {
+      setEditError(err.message ?? 'Failed to rename framework.');
+    } finally {
+      setEditSubmitting(false);
+    }
+  };
+
+  // ── delete handlers ────────────────────────────────────────────────────────
+  const startDelete = (fw: FrameworkEntry) => {
+    setDeletingId(fw.id);
+    setEditingId(null);
+  };
+
+  const cancelDelete = () => setDeletingId(null);
+
+  const handleDelete = async (fw: FrameworkEntry) => {
+    setDeleteSubmitting(true);
+    try {
+      await api.deleteFramework(fw.id);
+      setFrameworks(prev => prev.filter(f => f.id !== fw.id));
+      setSuccessMsg(`Framework "${fw.name}" deleted.`);
+      setTimeout(() => setSuccessMsg(''), 4000);
+    } catch (err: any) {
+      setSuccessMsg('');
+      alert(err.message ?? 'Failed to delete framework.');
+    } finally {
+      setDeleteSubmitting(false);
+      setDeletingId(null);
+    }
   };
 
   // ── render ─────────────────────────────────────────────────────────────────
@@ -300,11 +374,86 @@ export function FrameworkSelector() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                   {frameworks.filter(f => !f.isBuiltin).map((fw, idx) => (
                     <div key={fw.id}>
-                      <FrameworkCard
-                        fw={fw}
-                        iconColour={CUSTOM_COLOURS[idx % CUSTOM_COLOURS.length]}
-                        onClick={() => selectFramework(fw.id)}
-                      />
+                      {editingId === fw.id ? (
+                        /* ── Inline rename form ───────────────────────────── */
+                        <div className="bg-white border border-blue-300 rounded-xl shadow-sm p-5 space-y-3">
+                          <p className="text-sm font-semibold text-slate-800">Rename Framework</p>
+                          <div>
+                            <input
+                              type="text"
+                              value={editName}
+                              onChange={e => { setEditName(e.target.value); setEditError(''); }}
+                              maxLength={30}
+                              placeholder="Framework name"
+                              className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                            <p className="text-xs text-slate-400 mt-1">{editName.trim().length}/30</p>
+                          </div>
+                          <input
+                            type="text"
+                            value={editDesc}
+                            onChange={e => setEditDesc(e.target.value)}
+                            maxLength={120}
+                            placeholder="Description (optional)"
+                            className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                          {editError && (
+                            <div className="flex items-start gap-2 bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-xs">
+                              <AlertCircle size={13} className="shrink-0 mt-0.5" />
+                              {editError}
+                            </div>
+                          )}
+                          <div className="flex gap-2 pt-1">
+                            <button
+                              onClick={() => handleRename(fw)}
+                              disabled={editSubmitting}
+                              className="px-4 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-60 flex items-center gap-1.5"
+                            >
+                              {editSubmitting && <Loader2 size={12} className="animate-spin" />}
+                              Save
+                            </button>
+                            <button
+                              onClick={cancelEdit}
+                              className="px-4 py-1.5 text-slate-600 hover:text-slate-900 text-xs font-medium"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      ) : deletingId === fw.id ? (
+                        /* ── Delete confirmation ──────────────────────────── */
+                        <div className="bg-white border border-red-200 rounded-xl shadow-sm p-5 space-y-3">
+                          <p className="text-sm font-semibold text-slate-800">Delete Framework?</p>
+                          <p className="text-xs text-slate-500">
+                            Permanently delete <strong>"{fw.name}"</strong> and all its data. This cannot be undone.
+                          </p>
+                          <div className="flex gap-2 pt-1">
+                            <button
+                              onClick={() => handleDelete(fw)}
+                              disabled={deleteSubmitting}
+                              className="px-4 py-1.5 bg-red-600 text-white text-xs font-semibold rounded-lg hover:bg-red-700 disabled:opacity-60 flex items-center gap-1.5"
+                            >
+                              {deleteSubmitting && <Loader2 size={12} className="animate-spin" />}
+                              Delete
+                            </button>
+                            <button
+                              onClick={cancelDelete}
+                              className="px-4 py-1.5 text-slate-600 hover:text-slate-900 text-xs font-medium"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        /* ── Normal card ──────────────────────────────────── */
+                        <FrameworkCard
+                          fw={fw}
+                          iconColour={CUSTOM_COLOURS[idx % CUSTOM_COLOURS.length]}
+                          onClick={() => selectFramework(fw.id)}
+                          onEdit={() => startEdit(fw)}
+                          onDelete={() => startDelete(fw)}
+                        />
+                      )}
                     </div>
                   ))}
                 </div>
@@ -326,33 +475,55 @@ export function FrameworkSelector() {
 }
 
 // ── Sub-component: single framework card ──────────────────────────────────────
-function FrameworkCard({ fw, iconColour, onClick }: {
+function FrameworkCard({ fw, iconColour, onClick, onEdit, onDelete }: {
   fw: FrameworkEntry;
   iconColour: string;
   onClick: () => void;
+  onEdit?: () => void;
+  onDelete?: () => void;
 }) {
   return (
-    <button
-      onClick={onClick}
-      className="group bg-white p-7 rounded-xl border border-slate-200 shadow-sm
-                 hover:shadow-md hover:border-blue-400 transition-all text-left
-                 flex flex-col items-start gap-4 w-full"
-    >
-      <div className={`p-3 rounded-lg transition-colors ${iconColour}`}>
-        <FrameworkIcon id={fw.id} />
-      </div>
-      <div className="min-w-0 w-full">
-        <h3 className="text-lg font-semibold text-slate-900 truncate">{fw.name}</h3>
-        <p className="text-slate-500 mt-1 text-sm line-clamp-2">
-          {fw.description || 'Custom audit framework'}
-        </p>
-        {!fw.isBuiltin && (
-          <span className="inline-flex items-center mt-2 px-2 py-0.5 rounded text-[10px] uppercase
-                           font-bold tracking-widest bg-violet-100 text-violet-600 border border-violet-200">
-            Custom
-          </span>
-        )}
-      </div>
-    </button>
+    <div className="group relative bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:border-blue-400 transition-all">
+      {/* Edit / Delete action buttons — only for custom frameworks */}
+      {!fw.isBuiltin && onEdit && onDelete && (
+        <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+          <button
+            onClick={e => { e.stopPropagation(); onEdit(); }}
+            title="Rename framework"
+            className="p-1.5 rounded-md bg-white border border-slate-200 text-slate-400 hover:text-blue-600 hover:border-blue-300 shadow-sm transition-colors"
+          >
+            <Pencil size={13} />
+          </button>
+          <button
+            onClick={e => { e.stopPropagation(); onDelete(); }}
+            title="Delete framework"
+            className="p-1.5 rounded-md bg-white border border-slate-200 text-slate-400 hover:text-red-600 hover:border-red-300 shadow-sm transition-colors"
+          >
+            <Trash2 size={13} />
+          </button>
+        </div>
+      )}
+
+      <button
+        onClick={onClick}
+        className="p-7 text-left flex flex-col items-start gap-4 w-full"
+      >
+        <div className={`p-3 rounded-lg transition-colors ${iconColour}`}>
+          <FrameworkIcon id={fw.id} />
+        </div>
+        <div className="min-w-0 w-full pr-10">
+          <h3 className="text-lg font-semibold text-slate-900 truncate">{fw.name}</h3>
+          <p className="text-slate-500 mt-1 text-sm line-clamp-2">
+            {fw.description || 'Custom audit framework'}
+          </p>
+          {!fw.isBuiltin && (
+            <span className="inline-flex items-center mt-2 px-2 py-0.5 rounded text-[10px] uppercase
+                             font-bold tracking-widest bg-violet-100 text-violet-600 border border-violet-200">
+              Custom
+            </span>
+          )}
+        </div>
+      </button>
+    </div>
   );
 }

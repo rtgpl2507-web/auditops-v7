@@ -10,6 +10,8 @@ import {
   resetFrameworkData,
   listFrameworks,
   registerFramework,
+  renameFramework,
+  deleteFramework,
 } from '../storage';
 
 export const frameworkRouter = Router();
@@ -51,6 +53,38 @@ frameworkRouter.post('/', (req: Request, res: Response) => {
     return res.status(409).json({ error: 'A framework with that name already exists.' });
   }
   res.status(201).json(entry);
+});
+
+// ── PATCH /api/frameworks/:id  (rename a custom framework) ────────────────────
+frameworkRouter.patch('/:id/rename', (req: Request, res: Response) => {
+  const { id } = req.params as { id: string };
+  const { name, description } = req.body as { name?: string; description?: string };
+
+  if (!name || !name.trim()) {
+    return res.status(400).json({ error: 'Framework name is required.' });
+  }
+  if (name.trim().length > 30) {
+    return res.status(400).json({ error: 'Framework name must be 30 characters or fewer.' });
+  }
+  if (!/^[A-Za-z0-9 _\-]+$/.test(name.trim())) {
+    return res.status(400).json({ error: 'Only letters, digits, spaces, hyphens, and underscores are allowed.' });
+  }
+
+  const updated = renameFramework(id, name.trim(), description);
+  if (!updated) {
+    return res.status(409).json({ error: 'Could not rename: framework not found, is built-in, or name already taken.' });
+  }
+  res.json(updated);
+});
+
+// ── DELETE /api/frameworks/:id  (delete a custom framework) ───────────────────
+frameworkRouter.delete('/:id', (req: Request, res: Response) => {
+  const { id } = req.params as { id: string };
+  const success = deleteFramework(id);
+  if (!success) {
+    return res.status(404).json({ error: 'Framework not found or is a built-in framework.' });
+  }
+  res.json({ success: true });
 });
 
 // ── GET /api/frameworks/:framework ──────────────────────────────────────────

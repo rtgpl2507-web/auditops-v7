@@ -65,6 +65,71 @@ export function registerFramework(name: string, description: string): FrameworkE
   return entry;
 }
 
+/** Renames an existing custom framework. Returns the updated entry or null if not found / name taken. */
+export function renameFramework(id: string, newName: string, newDescription?: string): FrameworkEntry | null {
+  const reg = readRegistry();
+  const idx = reg.custom.findIndex(c => c.id === id);
+  if (idx === -1) return null; // not found or is built-in
+
+  const newId = newName.toUpperCase().replace(/[^A-Z0-9_]/g, '_');
+
+  // If the generated id changes, ensure it doesn't clash
+  if (newId !== id) {
+    if ((BUILTIN_FRAMEWORKS as readonly string[]).includes(newId)) return null;
+    if (reg.custom.some((c, i) => c.id === newId && i !== idx)) return null;
+
+    // Rename the data file on disk
+    const oldPath = path.join(DATA_DIR, `${id}.json`);
+    const newPath = path.join(DATA_DIR, `${newId}.json`);
+    if (fs.existsSync(oldPath)) fs.renameSync(oldPath, newPath);
+
+    // Also rename the tasks file
+    const oldTasksPath = path.join(TASKS_DIR, `${id}_tasks.json`);
+    const newTasksPath = path.join(TASKS_DIR, `${newId}_tasks.json`);
+    if (fs.existsSync(oldTasksPath)) fs.renameSync(oldTasksPath, newTasksPath);
+
+    // Update the framework field inside the data file
+    if (fs.existsSync(newPath)) {
+      try {
+        const data = JSON.parse(fs.readFileSync(newPath, 'utf-8'));
+        data.framework = newId;
+        fs.writeFileSync(newPath, JSON.stringify(data, null, 2), 'utf-8');
+      } catch { /* ignore */ }
+    }
+  }
+
+  reg.custom[idx] = {
+    id: newId,
+    name: newName.trim(),
+    description: newDescription !== undefined ? newDescription.trim() : reg.custom[idx].description,
+    isBuiltin: false,
+  };
+  writeRegistry(reg);
+  return reg.custom[idx];
+}
+
+/** Deletes a custom framework and all its data. Returns true on success. */
+export function deleteFramework(id: string): boolean {
+  const reg = readRegistry();
+  const idx = reg.custom.findIndex(c => c.id === id);
+  if (idx === -1) return false; // not found or built-in
+
+  // Remove data files
+  const dataPath = path.join(DATA_DIR, `${id}.json`);
+  if (fs.existsSync(dataPath)) fs.unlinkSync(dataPath);
+
+  const tasksPath = path.join(TASKS_DIR, `${id}_tasks.json`);
+  if (fs.existsSync(tasksPath)) fs.unlinkSync(tasksPath);
+
+  // Remove uploads directory
+  const uploadsPath = path.join(UPLOADS_DIR, id);
+  if (fs.existsSync(uploadsPath)) fs.rmSync(uploadsPath, { recursive: true, force: true });
+
+  reg.custom.splice(idx, 1);
+  writeRegistry(reg);
+  return true;
+}
+
 // ── Framework Data ────────────────────────────────────────────────────────────
 
 function getFrameworkPath(framework: FrameworkType): string {

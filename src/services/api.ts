@@ -31,6 +31,22 @@ export async function createFramework(name: string, description: string): Promis
   return handleResponse<FrameworkEntry>(res);
 }
 
+/** Renames an existing custom framework. */
+export async function renameFramework(id: string, name: string, description?: string): Promise<FrameworkEntry> {
+  const res = await fetch(`${BASE}/frameworks/${id}/rename`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, description }),
+  });
+  return handleResponse<FrameworkEntry>(res);
+}
+
+/** Deletes a custom framework permanently. */
+export async function deleteFramework(id: string): Promise<void> {
+  const res = await fetch(`${BASE}/frameworks/${id}`, { method: 'DELETE' });
+  return handleResponse<void>(res);
+}
+
 export async function fetchFramework(framework: FrameworkType): Promise<FrameworkData> {
   const res = await fetch(`${BASE}/frameworks/${framework}`);
   return handleResponse<FrameworkData>(res);
