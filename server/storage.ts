@@ -1,14 +1,24 @@
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 import { FrameworkType, FrameworkData, Task, FrameworkEntry, BUILTIN_FRAMEWORKS } from '../src/types';
 import { generateFrameworkData } from './seedData';
 
-const DATA_DIR    = path.join(process.cwd(), 'server', 'data', 'frameworks');
-const UPLOADS_DIR = path.join(process.cwd(), 'server', 'data', 'uploads');
-const TASKS_DIR   = path.join(process.cwd(), 'server', 'data', 'tasks');
-const REGISTRY_PATH = path.join(process.cwd(), 'server', 'data', 'registry.json');
+// ── Persistent data directory ─────────────────────────────────────────────────
+// On Render (or any cloud host with ephemeral filesystems), set the
+// AUDITOPS_DATA_DIR environment variable to a mounted persistent-disk path,
+// e.g. /var/data/auditops
+// When the variable is absent the default server/data path is used (local dev).
+const PERSISTENT_DATA_ROOT = process.env.AUDITOPS_DATA_DIR
+  ? path.resolve(process.env.AUDITOPS_DATA_DIR)
+  : path.join(process.cwd(), 'server', 'data');
 
-[DATA_DIR, UPLOADS_DIR, TASKS_DIR].forEach(dir => {
+const DATA_DIR      = path.join(PERSISTENT_DATA_ROOT, 'frameworks');
+const UPLOADS_DIR   = path.join(PERSISTENT_DATA_ROOT, 'uploads');
+const TASKS_DIR     = path.join(PERSISTENT_DATA_ROOT, 'tasks');
+const REGISTRY_PATH = path.join(PERSISTENT_DATA_ROOT, 'registry.json');
+
+[PERSISTENT_DATA_ROOT, DATA_DIR, UPLOADS_DIR, TASKS_DIR].forEach(dir => {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 });
 
@@ -21,14 +31,34 @@ interface Registry {
 function readRegistry(): Registry {
   if (fs.existsSync(REGISTRY_PATH)) {
     try {
-      return JSON.parse(fs.readFileSync(REGISTRY_PATH, 'utf-8')) as Registry;
-    } catch { /* fall through */ }
+      const raw = fs.readFileSync(REGISTRY_PATH, 'utf-8');
+      const parsed = JSON.parse(raw) as Registry;
+      // Guard against malformed files that are missing the `custom` array
+      if (!Array.isArray(parsed.custom)) {
+        console.error('[storage] registry.json is malformed (missing custom array) — treating as empty');
+        return { custom: [] };
+      }
+      return parsed;
+    } catch (err) {
+      console.error('[storage] Failed to parse registry.json — treating as empty:', err);
+    }
   }
   return { custom: [] };
 }
 
 function writeRegistry(reg: Registry): void {
-  fs.writeFileSync(REGISTRY_PATH, JSON.stringify(reg, null, 2), 'utf-8');
+  // Atomic write: write to a temp file first, then rename.
+  // This prevents registry corruption if the process is killed mid-write,
+  // which is the primary cause of frameworks "disappearing" on server restart.
+  const tmp = path.join(os.tmpdir(), `registry-${Date.now()}.json.tmp`);
+  try {
+    fs.writeFileSync(tmp, JSON.stringify(reg, null, 2), 'utf-8');
+    fs.renameSync(tmp, REGISTRY_PATH);
+  } catch (err) {
+    // Clean up the temp file if rename failed
+    if (fs.existsSync(tmp)) { try { fs.unlinkSync(tmp); } catch {} }
+    throw err;
+  }
 }
 
 /** Returns the full list of frameworks: built-in first, then custom. */
