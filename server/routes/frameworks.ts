@@ -33,12 +33,16 @@ const upload = multer({ storage, limits: { fileSize: 25 * 1024 * 1024 } });
 const csvUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 
 // ── GET /api/frameworks  (list all frameworks) ────────────────────────────────
-frameworkRouter.get('/', (_req: Request, res: Response) => {
-  res.json(listFrameworks());
+frameworkRouter.get('/', async (_req: Request, res: Response) => {
+  try {
+    res.json(await listFrameworks());
+  } catch (err: any) {
+    res.status(500).json({ error: err.message ?? 'Failed to list frameworks' });
+  }
 });
 
 // ── POST /api/frameworks  (create a new custom framework) ─────────────────────
-frameworkRouter.post('/', (req: Request, res: Response) => {
+frameworkRouter.post('/', async (req: Request, res: Response) => {
   const { name, description } = req.body as { name?: string; description?: string };
 
   if (!name || !name.trim()) {
@@ -48,15 +52,19 @@ frameworkRouter.post('/', (req: Request, res: Response) => {
     return res.status(400).json({ error: 'Framework name must be 30 characters or fewer.' });
   }
 
-  const entry = registerFramework(name.trim(), (description ?? '').trim());
-  if (!entry) {
-    return res.status(409).json({ error: 'A framework with that name already exists.' });
+  try {
+    const entry = await registerFramework(name.trim(), (description ?? '').trim());
+    if (!entry) {
+      return res.status(409).json({ error: 'A framework with that name already exists.' });
+    }
+    res.status(201).json(entry);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message ?? 'Failed to create framework' });
   }
-  res.status(201).json(entry);
 });
 
 // ── PATCH /api/frameworks/:id  (rename a custom framework) ────────────────────
-frameworkRouter.patch('/:id/rename', (req: Request, res: Response) => {
+frameworkRouter.patch('/:id/rename', async (req: Request, res: Response) => {
   const { id } = req.params as { id: string };
   const { name, description } = req.body as { name?: string; description?: string };
 
@@ -70,242 +78,278 @@ frameworkRouter.patch('/:id/rename', (req: Request, res: Response) => {
     return res.status(400).json({ error: 'Only letters, digits, spaces, hyphens, and underscores are allowed.' });
   }
 
-  const updated = renameFramework(id, name.trim(), description);
-  if (!updated) {
-    return res.status(409).json({ error: 'Could not rename: framework not found, is built-in, or name already taken.' });
+  try {
+    const updated = await renameFramework(id, name.trim(), description);
+    if (!updated) {
+      return res.status(409).json({ error: 'Could not rename: framework not found, is built-in, or name already taken.' });
+    }
+    res.json(updated);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message ?? 'Failed to rename framework' });
   }
-  res.json(updated);
 });
 
 // ── DELETE /api/frameworks/:id  (delete a custom framework) ───────────────────
-frameworkRouter.delete('/:id', (req: Request, res: Response) => {
+frameworkRouter.delete('/:id', async (req: Request, res: Response) => {
   const { id } = req.params as { id: string };
-  const success = deleteFramework(id);
-  if (!success) {
-    return res.status(404).json({ error: 'Framework not found or is a built-in framework.' });
+  try {
+    const success = await deleteFramework(id);
+    if (!success) {
+      return res.status(404).json({ error: 'Framework not found or is a built-in framework.' });
+    }
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message ?? 'Failed to delete framework' });
   }
-  res.json({ success: true });
 });
 
 // ── GET /api/frameworks/:framework ──────────────────────────────────────────
-frameworkRouter.get('/:framework', (req: Request, res: Response) => {
+frameworkRouter.get('/:framework', async (req: Request, res: Response) => {
   const { framework } = req.params as { framework: FrameworkType };
-  const data = getFrameworkData(framework);
-  res.json(data);
+  try {
+    const data = await getFrameworkData(framework);
+    res.json(data);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message ?? 'Failed to load framework' });
+  }
 });
 
 // ── POST /api/frameworks/:framework/controls (create new checklist task) ─────
-frameworkRouter.post('/:framework/controls', (req: Request, res: Response) => {
+frameworkRouter.post('/:framework/controls', async (req: Request, res: Response) => {
   const { framework } = req.params as { framework: FrameworkType };
   const body = req.body as Partial<AuditControl>;
 
-  const data = getFrameworkData(framework);
-  const srCounter = data.controls.length + 1;
+  try {
+    const data = await getFrameworkData(framework);
+    const srCounter = data.controls.length + 1;
 
-  const newControl: AuditControl = {
-    id: `${framework}-ctrl-${Math.random().toString(36).substring(2, 9)}`,
-    srNo: body.srNo || `${framework}-${String(srCounter).padStart(3, '0')}`,
-    controlRefNo: body.controlRefNo || `${framework}-REF-${String(srCounter).padStart(3, '0')}`,
-    domain: body.domain || '',
-    subDomain: body.subDomain || '',
-    controlPoint: body.controlPoint || '',
-    controlDescription: body.controlDescription || '',
-    documentRequired: body.documentRequired || '',
-    status: (body.status as ControlStatus) || 'Not Started',
-    clarification: body.clarification || '',
-    remarks: body.remarks || '',
-    evidence: [],
-    updatedAt: new Date().toISOString(),
-  };
+    const newControl: AuditControl = {
+      id: `${framework}-ctrl-${Math.random().toString(36).substring(2, 9)}`,
+      srNo: body.srNo || `${framework}-${String(srCounter).padStart(3, '0')}`,
+      controlRefNo: body.controlRefNo || `${framework}-REF-${String(srCounter).padStart(3, '0')}`,
+      domain: body.domain || '',
+      subDomain: body.subDomain || '',
+      controlPoint: body.controlPoint || '',
+      controlDescription: body.controlDescription || '',
+      documentRequired: body.documentRequired || '',
+      status: (body.status as ControlStatus) || 'Not Started',
+      clarification: body.clarification || '',
+      remarks: body.remarks || '',
+      evidence: [],
+      updatedAt: new Date().toISOString(),
+    };
 
-  data.controls.push(newControl);
-  data.activity.unshift({
-    id: Math.random().toString(36).substring(2, 9),
-    controlId: newControl.id,
-    controlPoint: newControl.controlPoint,
-    action: 'Created new checklist task',
-    timestamp: new Date().toISOString(),
-    user: 'Current User',
-  });
-  data.activity = data.activity.slice(0, 200);
-  saveFrameworkData(framework, data);
-  res.status(201).json(newControl);
+    data.controls.push(newControl);
+    data.activity.unshift({
+      id: Math.random().toString(36).substring(2, 9),
+      controlId: newControl.id,
+      controlPoint: newControl.controlPoint,
+      action: 'Created new checklist task',
+      timestamp: new Date().toISOString(),
+      user: 'Current User',
+    });
+    data.activity = data.activity.slice(0, 200);
+    await saveFrameworkData(framework, data);
+    res.status(201).json(newControl);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message ?? 'Failed to create control' });
+  }
 });
 
 // ── PUT /api/frameworks/:framework/controls/:controlId ───────────────────────
-frameworkRouter.put('/:framework/controls/:controlId', (req: Request, res: Response) => {
+frameworkRouter.put('/:framework/controls/:controlId', async (req: Request, res: Response) => {
   const { framework, controlId } = req.params as { framework: FrameworkType; controlId: string };
   const updates: Partial<AuditControl> = req.body;
 
-  const data = getFrameworkData(framework);
-  const idx = data.controls.findIndex(c => c.id === controlId);
-  if (idx === -1) return res.status(404).json({ error: 'Control not found' });
+  try {
+    const data = await getFrameworkData(framework);
+    const idx = data.controls.findIndex(c => c.id === controlId);
+    if (idx === -1) return res.status(404).json({ error: 'Control not found' });
 
-  const { evidence: _e, id: _id, ...safeUpdates } = updates as any;
+    const { evidence: _e, id: _id, ...safeUpdates } = updates as any;
 
-  data.controls[idx] = {
-    ...data.controls[idx],
-    ...safeUpdates,
-    updatedAt: new Date().toISOString(),
-  };
+    data.controls[idx] = {
+      ...data.controls[idx],
+      ...safeUpdates,
+      updatedAt: new Date().toISOString(),
+    };
 
-  const updatedFields = Object.keys(safeUpdates).join(', ');
-  data.activity.unshift({
-    id: Math.random().toString(36).substring(2, 9),
-    controlId,
-    controlPoint: data.controls[idx].controlPoint,
-    action: `Updated ${updatedFields}`,
-    timestamp: new Date().toISOString(),
-    user: 'Current User',
-  });
-  data.activity = data.activity.slice(0, 200);
+    const updatedFields = Object.keys(safeUpdates).join(', ');
+    data.activity.unshift({
+      id: Math.random().toString(36).substring(2, 9),
+      controlId,
+      controlPoint: data.controls[idx].controlPoint,
+      action: `Updated ${updatedFields}`,
+      timestamp: new Date().toISOString(),
+      user: 'Current User',
+    });
+    data.activity = data.activity.slice(0, 200);
 
-  saveFrameworkData(framework, data);
-  res.json(data.controls[idx]);
+    await saveFrameworkData(framework, data);
+    res.json(data.controls[idx]);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message ?? 'Failed to update control' });
+  }
 });
 
 // ── DELETE /api/frameworks/:framework/controls/:controlId ────────────────────
-frameworkRouter.delete('/:framework/controls/:controlId', (req: Request, res: Response) => {
+frameworkRouter.delete('/:framework/controls/:controlId', async (req: Request, res: Response) => {
   const { framework, controlId } = req.params as { framework: FrameworkType; controlId: string };
 
-  const data = getFrameworkData(framework);
-  const idx = data.controls.findIndex(c => c.id === controlId);
-  if (idx === -1) return res.status(404).json({ error: 'Control not found' });
+  try {
+    const data = await getFrameworkData(framework);
+    const idx = data.controls.findIndex(c => c.id === controlId);
+    if (idx === -1) return res.status(404).json({ error: 'Control not found' });
 
-  const control = data.controls[idx];
-  data.controls.splice(idx, 1);
+    const control = data.controls[idx];
+    data.controls.splice(idx, 1);
 
-  data.activity.unshift({
-    id: Math.random().toString(36).substring(2, 9),
-    controlId,
-    controlPoint: control.controlPoint,
-    action: 'Deleted checklist task',
-    timestamp: new Date().toISOString(),
-    user: 'Current User',
-  });
-  data.activity = data.activity.slice(0, 200);
+    data.activity.unshift({
+      id: Math.random().toString(36).substring(2, 9),
+      controlId,
+      controlPoint: control.controlPoint,
+      action: 'Deleted checklist task',
+      timestamp: new Date().toISOString(),
+      user: 'Current User',
+    });
+    data.activity = data.activity.slice(0, 200);
 
-  saveFrameworkData(framework, data);
-  res.json({ success: true });
+    await saveFrameworkData(framework, data);
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message ?? 'Failed to delete control' });
+  }
 });
 
 // ── POST /api/frameworks/:framework/controls/:controlId/evidence ─────────────
 frameworkRouter.post(
   '/:framework/controls/:controlId/evidence',
   upload.array('files', 10),
-  (req: Request, res: Response) => {
+  async (req: Request, res: Response) => {
     const { framework, controlId } = req.params as { framework: FrameworkType; controlId: string };
     const files = req.files as Express.Multer.File[];
     if (!files || files.length === 0)
       return res.status(400).json({ error: 'No files uploaded' });
 
-    const data = getFrameworkData(framework);
-    const idx = data.controls.findIndex(c => c.id === controlId);
-    if (idx === -1) return res.status(404).json({ error: 'Control not found' });
+    try {
+      const data = await getFrameworkData(framework);
+      const idx = data.controls.findIndex(c => c.id === controlId);
+      if (idx === -1) return res.status(404).json({ error: 'Control not found' });
 
-    const newEvidence: EvidenceFile[] = files.map(f => ({
-      id: Math.random().toString(36).substring(2, 9),
-      name: f.originalname,
-      storedName: f.filename,
-      type: path.extname(f.originalname).slice(1).toLowerCase() || 'bin',
-      size: f.size,
-      uploadedAt: new Date().toISOString(),
-      url: `/api/uploads/${framework}/${controlId}/${f.filename}`,
-    }));
+      const newEvidence: EvidenceFile[] = files.map(f => ({
+        id: Math.random().toString(36).substring(2, 9),
+        name: f.originalname,
+        storedName: f.filename,
+        type: path.extname(f.originalname).slice(1).toLowerCase() || 'bin',
+        size: f.size,
+        uploadedAt: new Date().toISOString(),
+        url: `/api/uploads/${framework}/${controlId}/${f.filename}`,
+      }));
 
-    data.controls[idx].evidence.push(...newEvidence);
-    data.controls[idx].updatedAt = new Date().toISOString();
+      data.controls[idx].evidence.push(...newEvidence);
+      data.controls[idx].updatedAt = new Date().toISOString();
 
-    data.activity.unshift({
-      id: Math.random().toString(36).substring(2, 9),
-      controlId,
-      controlPoint: data.controls[idx].controlPoint,
-      action: `Uploaded ${files.length} evidence file(s)`,
-      timestamp: new Date().toISOString(),
-      user: 'Current User',
-    });
-    data.activity = data.activity.slice(0, 200);
+      data.activity.unshift({
+        id: Math.random().toString(36).substring(2, 9),
+        controlId,
+        controlPoint: data.controls[idx].controlPoint,
+        action: `Uploaded ${files.length} evidence file(s)`,
+        timestamp: new Date().toISOString(),
+        user: 'Current User',
+      });
+      data.activity = data.activity.slice(0, 200);
 
-    saveFrameworkData(framework, data);
-    res.json({ evidence: data.controls[idx].evidence });
+      await saveFrameworkData(framework, data);
+      res.json({ evidence: data.controls[idx].evidence });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message ?? 'Failed to upload evidence' });
+    }
   }
 );
 
 // ── DELETE /api/frameworks/:framework/controls/:controlId/evidence/:fileId ───
 frameworkRouter.delete(
   '/:framework/controls/:controlId/evidence/:fileId',
-  (req: Request, res: Response) => {
+  async (req: Request, res: Response) => {
     const { framework, controlId, fileId } = req.params as {
       framework: FrameworkType;
       controlId: string;
       fileId: string;
     };
 
-    const data = getFrameworkData(framework);
-    const idx = data.controls.findIndex(c => c.id === controlId);
-    if (idx === -1) return res.status(404).json({ error: 'Control not found' });
+    try {
+      const data = await getFrameworkData(framework);
+      const idx = data.controls.findIndex(c => c.id === controlId);
+      if (idx === -1) return res.status(404).json({ error: 'Control not found' });
 
-    const file = data.controls[idx].evidence.find(e => e.id === fileId);
-    if (!file) return res.status(404).json({ error: 'Evidence file not found' });
+      const file = data.controls[idx].evidence.find(e => e.id === fileId);
+      if (!file) return res.status(404).json({ error: 'Evidence file not found' });
 
-    if ((file as any).storedName) {
-      deleteFileFromDisk(framework, controlId, (file as any).storedName);
+      if ((file as any).storedName) {
+        deleteFileFromDisk(framework, controlId, (file as any).storedName);
+      }
+
+      data.controls[idx].evidence = data.controls[idx].evidence.filter(e => e.id !== fileId);
+      data.controls[idx].updatedAt = new Date().toISOString();
+
+      data.activity.unshift({
+        id: Math.random().toString(36).substring(2, 9),
+        controlId,
+        controlPoint: data.controls[idx].controlPoint,
+        action: `Deleted evidence file: ${file.name}`,
+        timestamp: new Date().toISOString(),
+        user: 'Current User',
+      });
+      data.activity = data.activity.slice(0, 200);
+
+      await saveFrameworkData(framework, data);
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message ?? 'Failed to delete evidence' });
     }
-
-    data.controls[idx].evidence = data.controls[idx].evidence.filter(e => e.id !== fileId);
-    data.controls[idx].updatedAt = new Date().toISOString();
-
-    data.activity.unshift({
-      id: Math.random().toString(36).substring(2, 9),
-      controlId,
-      controlPoint: data.controls[idx].controlPoint,
-      action: `Deleted evidence file: ${file.name}`,
-      timestamp: new Date().toISOString(),
-      user: 'Current User',
-    });
-    data.activity = data.activity.slice(0, 200);
-
-    saveFrameworkData(framework, data);
-    res.json({ success: true });
   }
 );
 
 // ── GET /api/frameworks/:framework/export ────────────────────────────────────
-frameworkRouter.get('/:framework/export', (req: Request, res: Response) => {
+frameworkRouter.get('/:framework/export', async (req: Request, res: Response) => {
   const { framework } = req.params as { framework: FrameworkType };
-  const data = getFrameworkData(framework);
+  try {
+    const data = await getFrameworkData(framework);
 
-  const escape = (v: string) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const escape = (v: string) => `"${String(v ?? '').replace(/"/g, '""')}"`;
 
-  const headers = [
-    'Sr No', 'Control Ref No', 'Domain', 'Sub-Domain', 'Control Point', 'Control Description',
-    'Document Required', 'Status', 'Evidence Count', 'Clarification', 'Auditor Remarks', 'Last Updated',
-  ];
+    const headers = [
+      'Sr No', 'Control Ref No', 'Domain', 'Sub-Domain', 'Control Point', 'Control Description',
+      'Document Required', 'Status', 'Evidence Count', 'Clarification', 'Auditor Remarks', 'Last Updated',
+    ];
 
-  const rows = data.controls.map(c => [
-    escape(c.srNo),
-    escape(c.controlRefNo || ''),
-    escape(c.domain),
-    escape(c.subDomain),
-    escape(c.controlPoint),
-    escape(c.controlDescription),
-    escape(c.documentRequired),
-    escape(c.status),
-    escape(String(c.evidence.length)),
-    escape(c.clarification),
-    escape(c.remarks),
-    escape(new Date(c.updatedAt).toLocaleDateString('en-IN')),
-  ]);
+    const rows = data.controls.map(c => [
+      escape(c.srNo),
+      escape(c.controlRefNo || ''),
+      escape(c.domain),
+      escape(c.subDomain),
+      escape(c.controlPoint),
+      escape(c.controlDescription),
+      escape(c.documentRequired),
+      escape(c.status),
+      escape(String(c.evidence.length)),
+      escape(c.clarification),
+      escape(c.remarks),
+      escape(new Date(c.updatedAt).toLocaleDateString('en-IN')),
+    ]);
 
-  const csv = [headers.map(h => `"${h}"`).join(','), ...rows.map(r => r.join(','))].join('\r\n');
+    const csv = [headers.map(h => `"${h}"`).join(','), ...rows.map(r => r.join(','))].join('\r\n');
 
-  res.setHeader('Content-Type', 'text/csv');
-  res.setHeader('Content-Disposition', `attachment; filename="${framework}_Audit_Checklist.csv"`);
-  res.send(csv);
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="${framework}_Audit_Checklist.csv"`);
+    res.send(csv);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message ?? 'Failed to export framework' });
+  }
 });
 
 // ── POST /api/frameworks/:framework/import ────────────────────────────────────
-frameworkRouter.post('/:framework/import', csvUpload.single('file'), (req: Request, res: Response) => {
+frameworkRouter.post('/:framework/import', csvUpload.single('file'), async (req: Request, res: Response) => {
   const { framework } = req.params as { framework: FrameworkType };
   if (!req.file) return res.status(400).json({ error: 'No CSV file uploaded' });
 
@@ -401,7 +445,7 @@ frameworkRouter.post('/:framework/import', csvUpload.single('file'), (req: Reque
 
     if (dataRows.length < 2) return res.status(400).json({ error: 'CSV has no data rows' });
 
-    const data = getFrameworkData(framework);
+    const data = await getFrameworkData(framework);
     let importedCount = 0;
     let skippedCount = 0;
 
@@ -474,7 +518,7 @@ frameworkRouter.post('/:framework/import', csvUpload.single('file'), (req: Reque
       timestamp: new Date().toISOString(),
       user: 'Current User',
     });
-    saveFrameworkData(framework, data);
+    await saveFrameworkData(framework, data);
     res.json({ imported: importedCount, skipped: skippedCount, total: data.controls.length });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -482,8 +526,12 @@ frameworkRouter.post('/:framework/import', csvUpload.single('file'), (req: Reque
 });
 
 // ── POST /api/frameworks/:framework/reset ────────────────────────────────────
-frameworkRouter.post('/:framework/reset', (req: Request, res: Response) => {
+frameworkRouter.post('/:framework/reset', async (req: Request, res: Response) => {
   const { framework } = req.params as { framework: FrameworkType };
-  const data = resetFrameworkData(framework);
-  res.json(data);
+  try {
+    const data = await resetFrameworkData(framework);
+    res.json(data);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message ?? 'Failed to reset framework' });
+  }
 });

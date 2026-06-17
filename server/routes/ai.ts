@@ -32,7 +32,7 @@ async function groqChat(systemPrompt: string, userPrompt: string, maxTokens = 80
 aiRouter.post('/suggest', async (req: Request, res: Response) => {
   const { framework, controlId } = req.body as { framework: FrameworkType; controlId: string };
 
-  const data = getFrameworkData(framework);
+  const data = await getFrameworkData(framework);
   const control = data.controls.find(c => c.id === controlId);
   if (!control) return res.status(404).json({ error: 'Control not found' });
 
@@ -68,7 +68,7 @@ aiRouter.post('/chat', async (req: Request, res: Response) => {
     messages: { role: 'user' | 'model'; content: string }[];
   };
 
-  const data = getFrameworkData(framework);
+  const data = await getFrameworkData(framework);
   const totalControls = data.controls.length;
   const byStatus = data.controls.reduce<Record<string, number>>((acc, c) => {
     acc[c.status] = (acc[c.status] ?? 0) + 1;
@@ -264,7 +264,7 @@ Return ONLY valid JSON (no markdown, no backticks):
 // Body: { framework }  →  returns { summary: string }
 aiRouter.post('/summary', async (req: Request, res: Response) => {
   const { framework } = req.body as { framework: FrameworkType };
-  const data = getFrameworkData(framework);
+  const data = await getFrameworkData(framework);
 
   const total      = data.controls.length;
   const completed  = data.controls.filter(c => c.status === 'Completed').length;
