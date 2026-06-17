@@ -16,6 +16,7 @@ const PORT = Number(process.env.SERVER_PORT ?? 3001);
 app.use(
   cors({
     origin: [
+      'https://auditops.relishtechglobal.com',
       'https://auditopss.netlify.app',
       'http://localhost:3000'
     ],
