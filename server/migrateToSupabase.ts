@@ -16,19 +16,10 @@
 import fs from 'fs';
 import path from 'path';
 import dotenv from 'dotenv';
-
-// dotenv.config() must run, and finish, BEFORE supabaseClient.ts is loaded —
-// that module reads process.env.SUPABASE_URL the moment it's imported.
-// Static `import` statements are hoisted above regular statements by the
-// JS engine, so a static `import ... from './supabaseClient'` placed here
-// would already have executed before this line ever ran, capturing
-// `undefined`. A dynamic import() inside main() defers loading that module
-// until after dotenv.config() has populated process.env.
 dotenv.config({ path: '.env.local' });
 
-// Type-only imports are erased at compile time and have no runtime import
-// side effects, so they're safe to keep as static imports.
-import type { FrameworkEntry, FrameworkData } from '../src/types';
+import { getSupabase, isSupabaseConfigured } from './supabaseClient';
+import { FrameworkEntry, FrameworkData } from '../src/types';
 
 const PERSISTENT_DATA_ROOT = process.env.AUDITOPS_DATA_DIR
   ? path.resolve(process.env.AUDITOPS_DATA_DIR)
@@ -38,8 +29,6 @@ const DATA_DIR = path.join(PERSISTENT_DATA_ROOT, 'frameworks');
 const REGISTRY_PATH = path.join(PERSISTENT_DATA_ROOT, 'registry.json');
 
 async function main() {
-  const { getSupabase, isSupabaseConfigured } = await import('./supabaseClient');
-
   if (!isSupabaseConfigured()) {
     console.error('SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must both be set to run this migration.');
     process.exit(1);

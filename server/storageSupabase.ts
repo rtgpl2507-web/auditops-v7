@@ -244,10 +244,13 @@ export async function loadTasks(framework: FrameworkType): Promise<Task[]> {
 export async function saveFrameworkData(framework: FrameworkType, data: FrameworkData): Promise<void> {
   const supabase = getSupabase();
 
-  // Controls: replace the full set for this framework (small datasets, simplest correct approach)
-  const { error: delCErr } = await supabase.from('controls').delete().eq('framework_id', framework);
-  if (delCErr) throw new Error(`Supabase saveFrameworkData (clear controls) failed: ${delCErr.message}`);
-
+  // Controls: upsert (insert-or-update) instead of delete-all-then-insert.
+  // The previous delete+insert approach caused "duplicate key value violates
+  // unique constraint controls_pkey" whenever two saves overlapped (e.g.
+  // blurring one field while another save was still in flight) — both
+  // requests would delete all rows then race to re-insert the same IDs.
+  // Upsert has no such race: concurrent upserts on the same id just update
+  // that row twice, last-write-wins, with no constraint violation.
   if (data.controls.length > 0) {
     const controlRows = data.controls.map(c => ({
       id: c.id, framework_id: framework, sr_no: c.srNo, control_ref_no: c.controlRefNo,
@@ -256,7 +259,7 @@ export async function saveFrameworkData(framework: FrameworkType, data: Framewor
       status: c.status, clarification: c.clarification, remarks: c.remarks,
       updated_at: c.updatedAt,
     }));
-    const { error } = await supabase.from('controls').insert(controlRows);
+    const { error } = await supabase.from('controls').upsert(controlRows);
     if (error) throw new Error(`Supabase saveFrameworkData (controls) failed: ${error.message}`);
 
     const evidenceRows = data.controls.flatMap(c =>
@@ -271,17 +274,25 @@ export async function saveFrameworkData(framework: FrameworkType, data: Framewor
     }
   }
 
-  // Tasks: same replace-all approach
-  const { error: delTErr } = await supabase.from('tasks').delete().eq('framework_id', framework);
-  if (delTErr) throw new Error(`Supabase saveFrameworkData (clear tasks) failed: ${delTErr.message}`);
+  // Remove only controls that are genuinely gone from the incoming payload
+  // (i.e. the user deleted that control), not the entire table.
+  {
+    const keepIds = data.controls.map(c => c.id);
+    const del = supabase.from('controls').delete().eq('framework_id', framework);
+    const { error: delCErr } = keepIds.length > 0
+      ? await del.not('id', 'in', `(${keepIds.map(id => `"${id}"`).join(',')})`)
+      : await del;
+    if (delCErr) throw new Error(`Supabase saveFrameworkData (prune controls) failed: ${delCErr.message}`);
+  }
 
+  // Tasks: same upsert + prune-only-removed approach
   if (data.tasks.length > 0) {
     const taskRows = data.tasks.map(t => ({
       id: t.id, framework_id: framework, sr_no: t.srNo, task_name: t.taskName,
       task_description: t.taskDescription, status: t.status, remarks: t.remarks,
       updated_at: t.updatedAt,
     }));
-    const { error } = await supabase.from('tasks').insert(taskRows);
+    const { error } = await supabase.from('tasks').upsert(taskRows);
     if (error) throw new Error(`Supabase saveFrameworkData (tasks) failed: ${error.message}`);
 
     const docRows = data.tasks.flatMap(t =>
@@ -294,6 +305,15 @@ export async function saveFrameworkData(framework: FrameworkType, data: Framewor
       const { error: docErr } = await supabase.from('task_documents').upsert(docRows);
       if (docErr) throw new Error(`Supabase saveFrameworkData (task_documents) failed: ${docErr.message}`);
     }
+  }
+
+  {
+    const keepTaskIds = data.tasks.map(t => t.id);
+    const del = supabase.from('tasks').delete().eq('framework_id', framework);
+    const { error: delTErr } = keepTaskIds.length > 0
+      ? await del.not('id', 'in', `(${keepTaskIds.map(id => `"${id}"`).join(',')})`)
+      : await del;
+    if (delTErr) throw new Error(`Supabase saveFrameworkData (prune tasks) failed: ${delTErr.message}`);
   }
 
   // Activity log: insert only rows that don't already exist (it's append-only / capped at 200)
